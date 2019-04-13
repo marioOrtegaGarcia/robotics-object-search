@@ -8,10 +8,7 @@ project(roboticsFinal)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  std_msgs
-  tf2
-  tf2_ros
+roscpp geometry_msgs tf2 tf2_ros actionlib laser_geometry std_msgs
 )
 
 ## System dependencies are found with CMake's conventions
