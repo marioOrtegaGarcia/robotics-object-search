@@ -13,7 +13,7 @@ float arr_of_pts[18] = {-5,5, 0,5 , 5,5 , 5,0 , 0,0 , -5,0 , -5,-5 , 0,-5 , 5,-5
 
 int main(int argc,char **argv) {
 
-    ros::init(argc,argv,"final");
+    ros::init(argc,argv,"final_node");
     ros::NodeHandle nh;
 
     
