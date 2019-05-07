@@ -7,8 +7,8 @@ float strt_pt_x = 4;
 float strt_pt_y = 0;
 float end_pt_x = 9;
 float end_pt_y = 6;
-float arr_of_pts[18] = {-5,5, 0,5 , 5,5 , 5,0 , 0,0 , -5,0 , -5,-5 , 0,-5 , 5,-5 };
-
+//float arr_of_pts[18] = {-5,5, 0,5 , 5,5 , 5,0 , 0,0 , -5,0 , -5,-5 , 0,-5 , 5,-5 };
+float arr_of_pts[34] = {-5,5, -2.5,5, 0,5, 2.5,5, 5,5, 5,2.5, 5,0, 2.5,0, 0,0, -2.5,0, -5,0, -5,-2.5, -5,-5, -2.5,-5, 0,-5, 2.5,-5, 5,-5};
 
 
 int main(int argc,char **argv) {
@@ -29,7 +29,7 @@ int main(int argc,char **argv) {
    
    
     ros::Duration(3).sleep();
-    for (int i = 0; i < 18; i += 2){
+    for (int i = 0; i < 34; i += 2){
         ros::spinOnce();
         
         goal.target_pose.header.frame_id = "map";
