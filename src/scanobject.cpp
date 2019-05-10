@@ -63,10 +63,11 @@ void scanMessageReceived(const sensor_msgs::LaserScan&msg) {
       }
       avg = sum / total;
       totalAVG += avg;
-      // if (avg < 5) ROS_INFO_STREAM("Calculated Avg: " << avg);
+      // if (avg < 5) ROS_INFO_STREAM("Calculated Avg: " << avg);hypotf(msg.ranges[p[0]], msg.ranges[p[1]]);
+    // ROS_INFO_STREAM("Hypot: " << hy);
 
     }
-    if (avg < 5) ROS_INFO_STREAM("FOUND TABLE @ POINT (" << X+avg*cos(yaw) << ", "<< Y+avg*sin(yaw) << ") avg: " << totalAVG/total);
+    if (avg < 5) ROS_INFO_STREAM("FND TABLE @PNT(" << X+avg*cos(yaw) << ", "<< Y+avg*sin(yaw) << ") avg: " << totalAVG/total << " hypot 0,1: " << hypotf(msg.ranges[p[0]], msg.ranges[p[1]]) << " hypot 1,4: " << hypotf(msg.ranges[p[1]], msg.ranges[p[4]]));
 
   }
 
@@ -86,16 +87,10 @@ void scanMessageReceived(const sensor_msgs::LaserScan&msg) {
       totalAVG += avg;
       // if (avg < 3) ROS_INFO_STREAM("Calculated Avg: " << avg);
     }
-     if (avg < 3 && hy < 5.6 && hy > 4) ROS_INFO_STREAM("FOUND MAILBOX @ POINT (" << X+avg*cos(yaw) << ", "<< Y+avg*sin(yaw) << ") avg: " << totalAVG/total << " Hypot: " << hy);
+     if (avg < 3 && ((hy < 5.6 && hy > 4) || (hy > 2 && hy < 3)) ) ROS_INFO_STREAM("FND MAILBOX @PNT(" << X+avg*cos(yaw) << ", "<< Y+avg*sin(yaw) << ") avg rng: " << totalAVG/total
+    << " Real Hypot: " << hypotf(msg.ranges[p[0]]*cos((p[1]-p[0])*msg.angle_increment) , msg.ranges[p[1]]*sin((p[1]-p[0])*msg.angle_increment))
+     << " Hypot: " << hy);
   }
-  // for (size_t i = 0; i < p.size()-1; i++) {
-  //   X_1 = X+laserDerrivative[i]*cos(i*msg.angle_increment);
-  //   Y_1 = Y+laserDerrivative[i]*sin(i*msg.angle_increment);
-  //   X_2 = X+laserDerrivative[i+1]*cos(i+1*msg.angle_increment);
-  //   Y_2 = Y+laserDerrivative[i+1]*sin(i+1*msg.angle_increment);
-  //   ROS_INFO_STREAM("Point (" << (X_2+X_1)/2.0 << ", " << (Y_2+Y_1)/2.0 << ") Length "<< hypot(fabs(X_2-X_1), fabs(Y_2-Y_1)));
-  // }
-  // ROS_INFO_STREAM("Closest obstacle at distance (m)" << closest);
 }
 
 int main(int argc,char ** argv) {
