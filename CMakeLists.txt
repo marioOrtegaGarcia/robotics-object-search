@@ -134,6 +134,7 @@ include_directories(
 # add_executable(${PROJECT_NAME}_node src/roboticsFinal_node.cpp)
 
 add_executable(final_node src/final.cpp)
+add_executable(scanobject src/scanobject.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -151,6 +152,7 @@ add_executable(final_node src/final.cpp)
 # )
 
 target_link_libraries(final_node ${catkin_LIBRARIES})
+target_link_libraries(scanobject ${catkin_LIBRARIES})
 
 #############
 ## Install ##
