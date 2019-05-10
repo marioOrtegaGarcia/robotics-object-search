@@ -237,6 +237,8 @@ int main(int argc,char **argv) {
               }
             } else {
               ROS_INFO_STREAM("Failure to spin");
+              sendNextStep = true;
+              botState = SWEEP;
             }
           }
           break;
