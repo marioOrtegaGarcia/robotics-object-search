@@ -1,70 +1,261 @@
 #include <ros/ros.h>
-#include <move_base_msgs/MoveBaseAction.h>
+#include <nav_msgs/OccupancyGrid.h>
+#include <geometry_msgs/PolygonStamped.h>
+#include <geometry_msgs/Polygon.h>
 #include <actionlib/client/simple_action_client.h>
-#include <sensor_msgs/LaserScan.h>
+#include "frontier_exploration/ExploreTaskAction.h"
+#include <vector>
+#include <fstream>
+#include <move_base_msgs/MoveBaseAction.h>
+#include <geometry_msgs/Point.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2/utils.h>
+#include <cmath>
 
-float strt_pt_x = 4;
-float strt_pt_y = 0;
-float end_pt_x = 9;
-float end_pt_y = 6;
-//float arr_of_pts[18] = {-5,5, 0,5 , 5,5 , 5,0 , 0,0 , -5,0 , -5,-5 , 0,-5 , 5,-5 };
-float arr_of_pts[34] = {-5,5, -2.5,5, 0,5, 2.5,5, 5,5, 5,2.5, 5,0, 2.5,0, 0,0, -2.5,0, -5,0, -5,-2.5, -5,-5, -2.5,-5, 0,-5, 2.5,-5, 5,-5};
+// Initial Point.
+float X = 0;
+float Y = 0;
 
+// Area Bounded by two points
+float X1 = -9.0 + 0.5;
+float Y1 = -9.0 + 0.5;
+// Shifted by half a unit to allow robot to rotate
+float X2 = 9 - 0.5;
+float Y2 = 9 - 0.5;
+
+// Amound of steps used to calculate step size.
+float stepsX = 5;
+float stepsY = 5;
+float stepSizeX = fabs(X2-X1)/stepsX;
+float stepSizeY = fabs(Y2-Y1)/stepsY;
+
+// Boolean cases
+bool incX = true;
+bool completed = false;
+bool sendNextStep = true;
+bool cp = true;
+
+int dir = 0;
+
+void index2Coordinates(int i) {
+  float XX = floor(i/800)*0.05 - 20;
+  float YY = (i%800)*0.05 - 20;
+  ROS_INFO_STREAM("(" << XX << ", " << YY << ")");
+}
+
+// Calculates next point in sweep expects robot to be at initial point
+void calculateNextPoint() {
+
+  // CASE: We are at destination
+  if(X == X2 && Y == Y2) {
+    completed = true;
+    ROS_INFO("Point Last");
+
+  // CASE: We walk towards Point two's bound
+  } else if(incX && X < X2) {
+    ROS_INFO("mr -- Down");
+    X += stepSizeX;
+
+  // CASE: We walk towards Point one's bound
+  } else if((!incX) && X > X1) {
+    ROS_INFO("mr -- Up");
+    X -= stepSizeX;
+  // CASE: We bump into Point one or two's bound
+} else if(X <= X1 || X >= X2) {
+    incX = !incX;
+    Y += stepSizeY;
+    ros::Duration(0.5).sleep();
+    ROS_INFO("mr -- Right");
+  } else {
+    ROS_INFO("ERROR: NO CASE!!!");
+    if(incX){
+      ROS_INFO("incX");
+    } else {
+      ROS_INFO("descX");
+    }
+  }
+
+  ROS_INFO_STREAM("(" << X << "," << Y << ")");
+}
 
 int main(int argc,char **argv) {
 
-    ros::init(argc,argv,"final_node");
+    ros::init(argc,argv,"final");
     ros::NodeHandle nh;
 
-    
-    actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction>ac("move_base",true);
+    actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> ac("move_base",true);
     ROS_INFO_STREAM("Waiting for server to be available...");
     while (!ac.waitForServer()) {
     }
-    ROS_INFO_STREAM("done!");
+    ROS_INFO_STREAM("Connected to action server");
+
+    enum state {
+      GO_TO_AREA,
+      SWEEP,
+      ARRIVED,
+      SPIN,
+      LOST
+    };
+
+    state botState = GO_TO_AREA;
 
     move_base_msgs::MoveBaseGoal goal;
 
-    
-   
-   
-    ros::Duration(3).sleep();
-    for (int i = 0; i < 34; i += 2){
-        ros::spinOnce();
-        
-        goal.target_pose.header.frame_id = "map";
-        goal.target_pose.header.stamp = ros::Time::now();
-        goal.target_pose.pose.position.x = arr_of_pts[i];
-        goal.target_pose.pose.position.y = arr_of_pts[ i + 1];
-        ROS_INFO_STREAM("x = " << goal.target_pose.pose.position.x);
-        ROS_INFO_STREAM("y = " << goal.target_pose.pose.position.y);
-        goal.target_pose.pose.orientation.w = 1.0;
+    ros::Rate rate(1);
 
-        ac.sendGoal(goal);
-        ac.waitForResult();
-        ros::Duration(5).sleep();
-        if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED){
-            ROS_INFO_STREAM("SUCCESS");
-            
+    while (ros::ok()) {
+      ros::spinOnce();
 
-        }
-        else {
-            ROS_INFO_STREAM("FAILED TRY AGAIN");
-            i = i - 2;
-            goal.target_pose.pose.position.x = arr_of_pts[i];
-            goal.target_pose.pose.position.y = arr_of_pts[ i + 1] -1;
+      ROS_INFO("...");
+      switch (botState) {
+
+        case GO_TO_AREA: {
+
+          // goal.target_pose.header.frame_id = "map";
+          // // goal.target_pose.header.stamp = ros::Time::now();
+          // //
+          // // // goal.target_pose.pose.position.x = 0;
+          // // // goal.target_pose.pose.position.y = 2.2;
+          // // // goal.target_pose.pose.orientation.w = 1.0;
+          // // //
+          // // // ac.sendGoal(goal);
+          // ac.waitForResult();
+
+
+          ROS_INFO("Going to Area");
+          X = X1;
+          Y = Y1;
+          ROS_INFO_STREAM("(" << X << "," << Y << ")");
+
+          goal.target_pose.header.frame_id = "map";
+          goal.target_pose.header.stamp = ros::Time::now();
+
+          goal.target_pose.pose.position.x = X;
+          goal.target_pose.pose.position.y = Y;
+
+          goal.target_pose.pose.orientation.w = 1.0;
+
+          ac.sendGoal(goal);
+          ac.waitForResult();
+
+          if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
+            ROS_INFO_STREAM("Arrived to area");
+            botState = SPIN;
+          } else {
+            ROS_INFO_STREAM("Failed arrived to area");
             ros::Duration(3).sleep();
+            botState = GO_TO_AREA;
+          }
+          break;
+        }
+
+        case SWEEP: {
+
+          if (completed) {
+            botState = ARRIVED;
+          } else if (sendNextStep) {
+            sendNextStep = false;
+
+            goal.target_pose.header.frame_id = "map";
+            goal.target_pose.header.stamp = ros::Time::now();
+
+            // Setting Point
+            calculateNextPoint();
+            goal.target_pose.pose.position.x = X;
+            goal.target_pose.pose.position.y = Y;
+
+            // Setting Direction
+            if (incX) {
+              // Facing down in Gazebo
+              goal.target_pose.pose.orientation.x = 0;
+              goal.target_pose.pose.orientation.y = 0;
+              goal.target_pose.pose.orientation.z = 0;
+              goal.target_pose.pose.orientation.w = 1.0;
+            } else {
+              // Facing up in Gazebo
+              goal.target_pose.pose.orientation.x = 0;
+              goal.target_pose.pose.orientation.y = 0;
+              goal.target_pose.pose.orientation.z = 1.0;
+              goal.target_pose.pose.orientation.w = 0.0;
+            }
+
             ac.sendGoal(goal);
             ac.waitForResult();
-            if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED){
-                ROS_INFO_STREAM("SUCCESS");
-                i = i+2;
-                continue;
+
+            if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
+              ROS_INFO_STREAM("Success");
+              sendNextStep = true;
+              botState = SPIN;
+            } else {
+              ROS_INFO_STREAM("Failure");
+              ros::Duration(3).sleep();
+              sendNextStep = false;
+              botState = LOST;
             }
+          }
+
+          break;
         }
 
+        case SPIN: {
+          tf2::Quaternion quat_tf;
+          geometry_msgs::Quaternion quat_msg;
+          dir = 0;
+          while (dir < 3) {
+            goal.target_pose.header.frame_id = "map";
+            goal.target_pose.header.stamp = ros::Time::now();
 
-    
-    } 
-    nh.shutdown();
+            goal.target_pose.pose.position.x = X;
+            goal.target_pose.pose.position.y = Y;
+
+            if (dir == 0) {
+              ROS_INFO_STREAM("Spin " << dir);
+              quat_tf.setRPY(0,0,0 *(M_PI/180));
+            } else if (dir == 1) {
+              ROS_INFO_STREAM("Spin " << dir);
+              quat_tf.setRPY(0,0,120 *(M_PI/180));
+            } else if (dir == 2) {
+              ROS_INFO_STREAM("Spin " << dir);
+              quat_tf.setRPY(0,0,240 *(M_PI/180));
+            }
+            quat_msg = tf2::toMsg(quat_tf);
+            goal.target_pose.pose.orientation = quat_msg;
+
+
+            ac.sendGoal(goal);
+            ac.waitForResult();
+
+            if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
+              ROS_INFO_STREAM("Successful spin");
+              if (dir < 3) {
+                dir++;
+              }
+              if (dir == 3) {
+                sendNextStep = true;
+                botState = SWEEP;
+              }
+            } else {
+              ROS_INFO_STREAM("Failure to spin");
+            }
+          }
+          break;
+        }
+
+        case ARRIVED: {
+          ROS_INFO("Completed sweep.");
+          ros::shutdown();
+          break;
+        }
+
+        case LOST: {
+          ROS_INFO("Robot could not make it to point, going to next point");
+          sendNextStep = true;
+          botState = SWEEP;
+          break;
+        }
+      }
+    }
+
+    return 0;
 }
