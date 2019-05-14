@@ -18,15 +18,15 @@ float X = 0;
 float Y = 0;
 
 // Area Bounded by two points
-float X1 = -9.0 + 0.5;
-float Y1 = -9.0 + 0.5;
+float X1 = -9.0 + 1;
+float Y1 = -9.0 + 1;
 // Shifted by half a unit to allow robot to rotate
-float X2 = 9 - 0.5;
-float Y2 = 9 - 0.5;
+float X2 = 9 - 1;
+float Y2 = 9 - 1;
 
 // Amound of steps used to calculate step size.
-float stepsX = 5;
-float stepsY = 5;
+float stepsX = 4;
+float stepsY = 4;
 float stepSizeX = fabs(X2-X1)/stepsX;
 float stepSizeY = fabs(Y2-Y1)/stepsY;
 
@@ -140,12 +140,12 @@ int main(int argc,char **argv) {
           ac.waitForResult();
 
           if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
-            ROS_INFO_STREAM("Arrived to area");
+            ROS_INFO_STREAM("Succ: Arrived to area");
             botState = SPIN;
           } else {
-            ROS_INFO_STREAM("Failed arrived to area");
+            ROS_INFO_STREAM("Err: Failed arrived to area");
             ros::Duration(3).sleep();
-            botState = GO_TO_AREA;
+            botState = LOST;
           }
           break;
         }
@@ -181,14 +181,14 @@ int main(int argc,char **argv) {
             }
 
             ac.sendGoal(goal);
-            ac.waitForResult();
+            ac.waitForResult(ros::Duration(45.0));
 
             if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
-              ROS_INFO_STREAM("Success");
+              ROS_INFO_STREAM("Succ");
               sendNextStep = true;
               botState = SPIN;
             } else {
-              ROS_INFO_STREAM("Failure");
+              ROS_INFO_STREAM("Err: Timed out");
               ros::Duration(3).sleep();
               sendNextStep = false;
               botState = LOST;
@@ -224,10 +224,10 @@ int main(int argc,char **argv) {
 
 
             ac.sendGoal(goal);
-            ac.waitForResult();
+            ac.waitForResult(ros::Duration(7.0));
 
             if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
-              ROS_INFO_STREAM("Successful spin");
+              ROS_INFO_STREAM("Succ: Spin");
               if (dir < 3) {
                 dir++;
               }
@@ -236,22 +236,25 @@ int main(int argc,char **argv) {
                 botState = SWEEP;
               }
             } else {
-              ROS_INFO_STREAM("Failure to spin");
-              sendNextStep = true;
-              botState = SWEEP;
+              ROS_INFO_STREAM("Err: Spin timmed our or failed");
+              dir++;
             }
+          }
+          if (dir >= 3) {
+            sendNextStep = true;
+            botState = SWEEP;
           }
           break;
         }
 
         case ARRIVED: {
-          ROS_INFO("Completed sweep.");
+          ROS_INFO("Succ: Scan of area");
           ros::shutdown();
           break;
         }
 
         case LOST: {
-          ROS_INFO("Robot could not make it to point, going to next point");
+          ROS_INFO("Err: Going to next point");
           sendNextStep = true;
           botState = SWEEP;
           break;
